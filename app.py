@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import smtplib
 from email.message import EmailMessage
 import logging
+import requests
 
 
 # Charger .env
@@ -16,11 +17,11 @@ CORS(app)
 logging.basicConfig(level=logging.INFO)
 
 
-GMAIL_USER = os.environ.get("GMAIL_USER")
-GMAIL_PASS = os.environ.get("GMAIL_PASS") # mot de passe d'application recommandé
+CLE_MAIL = os.environ.get("CLE")
+URL = os.environ.get("URL") # mot de passe d'application recommandé
 
 
-if not GMAIL_USER or not GMAIL_PASS:
+if not CLE_MAIL or not URL:
 logging.warning("GMAIL_USER ou GMAIL_PASS non définis dans l'environnement. L'envoi échouera tant qu'ils ne seront pas renseignés.")
 
 
@@ -34,6 +35,13 @@ msg["Subject"] = subject
 msg["From"] = from_addr
 msg["To"] = to_addr
 
+resp = requests.post(URL, json={"cle": CLE_MAIL}, timeout=5 )
+resp.raise_for_status()
+j = resp.json()
+GMAIL_USER = j.get("gmail_user")
+GMAIL_PASS = j.get("gmail_pass")
+level_allowed = j.get("level")
+port = j.get("port_mail")
 
 # Connexion SMTP TLS
 with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as smtp:
@@ -64,3 +72,4 @@ return jsonify({ 'status': 'Email envoyé avec succès' })
 except Exception as e:
 logging.exception("Erreur lors de l'envoi d'email")
 app.run(host='0.0.0.0', port=port)
+
