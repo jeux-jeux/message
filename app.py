@@ -22,18 +22,7 @@ URL = os.environ.get("URL") # mot de passe d'application recommandé
 
 
 if not CLE_MAIL or not URL:
-logging.warning("GMAIL_USER ou GMAIL_PASS non définis dans l'environnement. L'envoi échouera tant qu'ils ne seront pas renseignés.")
-
-
-
-
-def _send_mail(from_addr: str, to_addr: str, subject: str, body: str) -> None:
-"""Envoie un email via le SMTP Gmail (TLS/587)."""
-msg = EmailMessage()
-msg.set_content(body)
-msg["Subject"] = subject
-msg["From"] = from_addr
-msg["To"] = to_addr
+    logging.warning("CLE_MAIL ou URL non définis dans l'environnement. L'envoi échouera tant qu'ils ne seront pas renseignés.")
 
 resp = requests.post(URL, json={"cle": CLE_MAIL}, timeout=5 )
 resp.raise_for_status()
@@ -42,34 +31,45 @@ GMAIL_USER = j.get("gmail_user")
 GMAIL_PASS = j.get("gmail_pass")
 level_allowed = j.get("level")
 port = j.get("port_mail")
-
-# Connexion SMTP TLS
-with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as smtp:
-smtp.ehlo()
-smtp.starttls()
-smtp.ehlo()
-smtp.login(GMAIL_USER, GMAIL_PASS)
-smtp.send_message(msg)
+email_adress = j.get("email_adress")
 
 
+def _send_mail(from_addr: str, to_addr: str, subject: str, body: str) -> None:
+    """Envoie un email via le SMTP Gmail (TLS/587)."""
+    msg = EmailMessage()
+    msg.set_content(body)
+    msg["Subject"] = subject
+    msg["From"] = from_addr
+    msg["To"] = to_addr
+
+    # Connexion SMTP TLS
+    with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as smtp:
+        smtp.ehlo()
+        smtp.starttls()
+        smtp.ehlo()
+        smtp.login(GMAIL_USER, GMAIL_PASS)
+        smtp.send_message(msg)
 
 
-@app.route('/', methods=['POST'])
+@app.route('/send-mail', methods=['POST'])
 def send_mail_route():
-data = request.get_json() or {}
-to = data.get('to')
-subject = data.get('subject')
-body = data.get('body')
+    data = request.get_json() or {}
+    to = data.get('to')
+    subject = "Jeu des Trizos"
+    body = data.get('body')
+
+    if not to or not subject or not body:
+        return jsonify({ 'error': 'Champs to, subject, body obligatoires' }), 400
+
+    try:
+        _send_mail(GMAIL_USER, to, subject, body)
+        return jsonify({ 'status': 'Email envoyé avec succès' })
+    except Exception as e:
+        logging.exception("Erreur lors de l'envoi d'email")
+        return jsonify({ 'error': "Erreur lors de l’envoi", 'details': str(e) }), 500
 
 
-if not to or not subject or not body:
-return jsonify({ 'error': 'Champs to, subject, body obligatoires' }), 400
-
-
-try:
-_send_mail(GMAIL_USER, to, subject, body)
-return jsonify({ 'status': 'Email envoyé avec succès' })
-except Exception as e:
-logging.exception("Erreur lors de l'envoi d'email")
-app.run(host='0.0.0.0', port=port)
-
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 3000))
+    # Hôte 0.0.0.0 pour permettre l'accès depuis l'extérieur (sur un service comme Render)
+    app.run(host='0.0.0.0', port=port)
