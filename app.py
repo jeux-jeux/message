@@ -17,21 +17,23 @@ CORS(app)
 logging.basicConfig(level=logging.INFO)
 
 
-CLE_MAIL = os.environ.get("CLE")
+CLE_MESSAGE = os.environ.get("CLE")
 URL = os.environ.get("URL") # mot de passe d'application recommandé
 
 
 if not CLE_MAIL or not URL:
     logging.warning("CLE_MAIL ou URL non définis dans l'environnement. L'envoi échouera tant qu'ils ne seront pas renseignés.")
 
-resp = requests.post(URL, json={"cle": CLE_MAIL}, timeout=5 )
+resp = requests.post(URL, json={"cle": CLE_MESSAGE}, timeout=5 )
 resp.raise_for_status()
 j = resp.json()
 GMAIL_USER = j.get("gmail_user")
 GMAIL_PASS = j.get("gmail_pass")
 level_allowed = j.get("level")
-port = j.get("port_mail")
-email_adress = j.get("email_adress")
+allowed = j.get('allowed')
+port = j.get("port_message")
+email = j.get("email")
+ntfy_url = j.get('ntfy_url')
 
 
 def _send_mail(from_addr: str, to_addr: str, subject: str, body: str) -> None:
@@ -49,7 +51,44 @@ def _send_mail(from_addr: str, to_addr: str, subject: str, body: str) -> None:
         smtp.ehlo()
         smtp.login(GMAIL_USER, GMAIL_PASS)
         smtp.send_message(msg)
+        
+@app.route('/ntfy', methods=['POST'])
+def send_mail_route():
+    data = request.get_json() or {}
+    message = data.get('message')
 
+    if level_allowed == "nothing":
+        ok = False
+    elif level_allowed == "origin":
+        origin = request.headers.get('Origin')
+        if origin in allowed:
+            ok = True
+        else:
+            ok = False
+    else:
+        ok = True
+        
+    cle_received = data.get('cle')
+    if cle_received and ok == False:
+        resp = requests.post(f"{URL}cle-ultra", json={"cle": cle_received}, timeout=5 )
+        resp.raise_for_status()
+        j = resp.json()
+        access = j.get("access")
+        if not access == "false":
+            ok = True
+
+    if ok == True:
+        if not message:
+            return jsonify({ 'error': 'Champs subject, body obligatoires' })
+    
+        try:
+            resp = requests.post(ntfy_url, data=message, headers={"Content-Type": "text/plain"}, timeout=5 )
+            return jsonify({ 'status': 'Message ntfy envoyé avec succès' })
+        except Exception as e:
+            logging.exception("Erreur lors de l'envoi d'email")
+            return jsonify({ 'error': "Erreur lors de l’envoi"})
+    else:
+        return jsonify({ 'error': "Acces refusé"})
 
 @app.route('/mail', methods=['POST'])
 def send_mail_route():
@@ -61,7 +100,11 @@ def send_mail_route():
     if level_allowed == "nothing":
         ok = False
     elif level_allowed == "origin":
-        
+        origin = request.headers.get('Origin')
+        if origin in allowed:
+            ok = True
+        else:
+            ok = False
     else:
         ok = True
         
@@ -91,4 +134,5 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
     # Hôte 0.0.0.0 pour permettre l'accès depuis l'extérieur (sur un service comme Render)
     app.run(host='0.0.0.0', port=port)
+
 
