@@ -21,7 +21,7 @@ CLE_MESSAGE = os.environ.get("CLE")
 URL = os.environ.get("URL") # mot de passe d'application recommandé
 
 
-if not CLE_MAIL or not URL:
+if not CLE_MESSAGE or not URL:
     logging.warning("CLE_MAIL ou URL non définis dans l'environnement. L'envoi échouera tant qu'ils ne seront pas renseignés.")
 
 resp = requests.post(URL, json={"cle": CLE_MESSAGE}, timeout=5 )
@@ -134,5 +134,6 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
     # Hôte 0.0.0.0 pour permettre l'accès depuis l'extérieur (sur un service comme Render)
     app.run(host='0.0.0.0', port=port)
+
 
 
