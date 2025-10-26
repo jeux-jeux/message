@@ -51,7 +51,7 @@ def _send_mail(from_addr: str, to_addr: str, subject: str, body: str) -> None:
         smtp.send_message(msg)
 
 
-@app.route('/send-mail', methods=['POST'])
+@app.route('/mail', methods=['POST'])
 def send_mail_route():
     data = request.get_json() or {}
     to = email_adress
@@ -91,3 +91,4 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
     # Hôte 0.0.0.0 pour permettre l'accès depuis l'extérieur (sur un service comme Render)
     app.run(host='0.0.0.0', port=port)
+
