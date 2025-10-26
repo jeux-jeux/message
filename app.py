@@ -6,7 +6,11 @@ import smtplib
 from email.message import EmailMessage
 import logging
 import requests
-
+import base64
+from email.mime.text import MIMEText
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+import logging
 
 # Charger .env
 load_dotenv()
@@ -35,27 +39,32 @@ port = j.get("port_message")
 email = j.get("email")
 ntfy_url = j.get('ntfy_url')
 
-
 def _send_mail(from_addr: str, to_addr: str, subject: str, body: str) -> None:
-    """Envoie un e-mail via l'API de SendGrid."""
-    url = "https://api.sendgrid.com/v3/mail/send"
-    headers = {
-        "Authorization": f"Bearer {GMAIL_PASS}",
-        "Content-Type": "application/json"
-    }
-    data = {
-        "personalizations": [{
-            "to": [{"email": to_addr}],
-            "subject": subject
-        }],
-        "from": {"email": from_addr},
-        "content": [{
-            "type": "text/plain",
-            "value": body
-        }]
-    }
-    response = requests.post(url, json=data, headers=headers)
-    response.raise_for_status()
+    """
+    Envoie un mail via Gmail API.
+    from_addr : expéditeur
+    to_addr : destinataire
+    subject : sujet du mail
+    body : contenu texte du mail
+    """
+    try:
+        # Charger le token OAuth
+        creds = Credentials.from_authorized_user_file(GMAIL_PASS, ["https://www.googleapis.com/auth/gmail.send"])
+        service = build('gmail', 'v1', credentials=creds)
+
+        # Préparer le message
+        message = MIMEText(body)
+        message['to'] = to_addr
+        message['subject'] = subject
+        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+
+        # Envoyer le mail
+        sent_msg = service.users().messages().send(userId="me", body={"raw": raw}).execute()
+        logging.info(f"Email envoyé, ID: {sent_msg['id']}")
+    except Exception as e:
+        logging.exception("Erreur lors de l'envoi d'email via Gmail API")
+        raise e
+
         
 @app.route('/ntfy', methods=['POST'])
 def send_ntfy_route():
@@ -139,6 +148,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
     # Hôte 0.0.0.0 pour permettre l'accès depuis l'extérieur (sur un service comme Render)
     app.run(host='0.0.0.0', port=port)
+
 
 
 
