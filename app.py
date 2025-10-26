@@ -36,21 +36,15 @@ email = j.get("email")
 ntfy_url = j.get('ntfy_url')
 
 
-def _send_mail(from_addr: str, to_addr: str, subject: str, body: str) -> None:
-    """Envoie un email via le SMTP Gmail (TLS/587)."""
-    msg = EmailMessage()
-    msg.set_content(body)
-    msg["Subject"] = subject
-    msg["From"] = from_addr
-    msg["To"] = to_addr
-
-    # Connexion SMTP TLS
-    with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as smtp:
-        smtp.ehlo()
-        smtp.starttls()
-        smtp.ehlo()
-        smtp.login(GMAIL_USER, GMAIL_PASS)
-        smtp.send_message(msg)
+def _send_mail(to, subject, body):
+    data = {
+        "from": email,
+        "to": [to],
+        "subject": subject,
+        "text": body
+    }
+    headers = {"Authorization": "Bearer TA_CLE_API"}
+    requests.post("https://api.sendgrid.com/v3/mail/send", json=data, headers=headers)
         
 @app.route('/ntfy', methods=['POST'])
 def send_ntfy_route():
@@ -122,7 +116,7 @@ def send_mail_route():
             return jsonify({ 'error': 'Champs subject, body obligatoires' })
     
         try:
-            _send_mail(GMAIL_USER, to, subject, body)
+            _send_mail(to, subject, body)
             return jsonify({ 'status': 'Email envoyé avec succès' })
         except Exception as e:
             logging.exception("Erreur lors de l'envoi d'email")
@@ -134,6 +128,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
     # Hôte 0.0.0.0 pour permettre l'accès depuis l'extérieur (sur un service comme Render)
     app.run(host='0.0.0.0', port=port)
+
 
 
 
