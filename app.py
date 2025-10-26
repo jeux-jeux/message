@@ -79,7 +79,7 @@ def send_ntfy_route():
 
     if ok == True:
         if not message:
-            return jsonify({ 'error': 'Champs subject, body obligatoires' })
+            return jsonify({ 'error': 'Champs message obligatoire' })
     
         try:
             resp = requests.post(ntfy_url, data=message, headers={"Content-Type": "text/plain"}, timeout=5 )
@@ -134,6 +134,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
     # Hôte 0.0.0.0 pour permettre l'accès depuis l'extérieur (sur un service comme Render)
     app.run(host='0.0.0.0', port=port)
+
 
 
 
