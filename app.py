@@ -36,15 +36,26 @@ email = j.get("email")
 ntfy_url = j.get('ntfy_url')
 
 
-def _send_mail(to, subject, body):
-    data = {
-        "from": email,
-        "to": [to],
-        "subject": subject,
-        "text": body
+def _send_mail(from_addr: str, to_addr: str, subject: str, body: str) -> None:
+    """Envoie un e-mail via l'API de SendGrid."""
+    url = "https://api.sendgrid.com/v3/mail/send"
+    headers = {
+        "Authorization": f"Bearer {GMAIL_PASS}",
+        "Content-Type": "application/json"
     }
-    headers = {"Authorization": "Bearer TA_CLE_API"}
-    requests.post("https://api.sendgrid.com/v3/mail/send", json=data, headers=headers)
+    data = {
+        "personalizations": [{
+            "to": [{"email": to_addr}],
+            "subject": subject
+        }],
+        "from": {"email": from_addr},
+        "content": [{
+            "type": "text/plain",
+            "value": body
+        }]
+    }
+    response = requests.post(url, json=data, headers=headers)
+    response.raise_for_status()
         
 @app.route('/ntfy', methods=['POST'])
 def send_ntfy_route():
@@ -116,7 +127,7 @@ def send_mail_route():
             return jsonify({ 'error': 'Champs subject, body obligatoires' })
     
         try:
-            _send_mail(to, subject, body)
+            _send_mail(GMAIL_USER, to, subject, body)
             return jsonify({ 'status': 'Email envoyé avec succès' })
         except Exception as e:
             logging.exception("Erreur lors de l'envoi d'email")
@@ -128,6 +139,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
     # Hôte 0.0.0.0 pour permettre l'accès depuis l'extérieur (sur un service comme Render)
     app.run(host='0.0.0.0', port=port)
+
 
 
 
