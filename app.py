@@ -58,30 +58,38 @@ def send_mail_route():
     subject = "Jeu des Trizos"
     body = data.get('body')
 
+    if level_allowed == "nothing":
+        ok = False
+    elif level_allowed == "origin":
+        
+    else:
+        ok = True
+        
     cle_received = data.get('cle')
-    if cle:
+    if cle_received and ok == False:
         resp = requests.post(f"{URL}cle-ultra", json={"cle": cle_received}, timeout=5 )
         resp.raise_for_status()
         j = resp.json()
         access = j.get("access")
         if not access == "false":
             ok = True
-        else:
-            ok = False
 
-    if not to or not subject or not body:
-        return jsonify({ 'error': 'Champs to, subject, body obligatoires' }), 400
-
-    try:
-        _send_mail(GMAIL_USER, to, subject, body)
-        return jsonify({ 'status': 'Email envoyé avec succès' })
-    except Exception as e:
-        logging.exception("Erreur lors de l'envoi d'email")
-        return jsonify({ 'error': "Erreur lors de l’envoi", 'details': str(e) }), 500
-
+    if ok == True:
+        if not to or not subject or not body:
+            return jsonify({ 'error': 'Champs subject, body obligatoires' })
+    
+        try:
+            _send_mail(GMAIL_USER, to, subject, body)
+            return jsonify({ 'status': 'Email envoyé avec succès' })
+        except Exception as e:
+            logging.exception("Erreur lors de l'envoi d'email")
+            return jsonify({ 'error': "Erreur lors de l’envoi", 'details': str(e) })
+    else:
+        return jsonify({ 'error': "Acces refusé"})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
     # Hôte 0.0.0.0 pour permettre l'accès depuis l'extérieur (sur un service comme Render)
     app.run(host='0.0.0.0', port=port)
+
 
