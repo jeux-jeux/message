@@ -39,31 +39,38 @@ port = j.get("port_message")
 email = j.get("email")
 ntfy_url = j.get('ntfy_url')
 
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+import json
+
 def _send_mail(from_addr: str, to_addr: str, subject: str, body: str) -> None:
-    """
-    Envoie un mail via Gmail API.
-    from_addr : expéditeur
-    to_addr : destinataire
-    subject : sujet du mail
-    body : contenu texte du mail
-    """
+    """Envoie un e-mail via l'API Gmail sans fichier token."""
     try:
-        # Charger le token OAuth
-        creds = Credentials.from_authorized_user_file(GMAIL_PASS, ["https://www.googleapis.com/auth/gmail.send"])
-        service = build('gmail', 'v1', credentials=creds)
+        # Le token JSON est stocké dans une variable d'environnement
+        token_json = GMAIL_PASS
+        if not token_json:
+            raise Exception("Reponse GMAIL_TOKEN manquante")
 
-        # Préparer le message
-        message = MIMEText(body)
-        message['to'] = to_addr
-        message['subject'] = subject
-        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        # Charger le JSON directement en mémoire
+        creds_data = json.loads(token_json)
+        creds = Credentials.from_authorized_user_info(creds_data)
 
-        # Envoyer le mail
-        sent_msg = service.users().messages().send(userId="me", body={"raw": raw}).execute()
-        logging.info(f"Email envoyé, ID: {sent_msg['id']}")
+        service = build("gmail", "v1", credentials=creds)
+
+        message = {
+            "raw": base64.urlsafe_b64encode(
+                f"From: {from_addr}\r\nTo: {to_addr}\r\nSubject: {subject}\r\n\r\n{body}".encode("utf-8")
+            ).decode("utf-8")
+        }
+
+        service.users().messages().send(userId="me", body=message).execute()
+
+    except HttpError as error:
+        raise Exception(f"Erreur API Gmail : {error}")
     except Exception as e:
-        logging.exception("Erreur lors de l'envoi d'email via Gmail API")
-        raise e
+        raise Exception(f"Erreur lors de l’envoi : {e}")
+
 
         
 @app.route('/ntfy', methods=['POST'])
