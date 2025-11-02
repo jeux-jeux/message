@@ -83,7 +83,7 @@ def send_ntfy_route():
         ok = False
     elif level_allowed == "origin":
         origin = request.headers.get('Origin')
-        if origin in allowed:
+        if origin and origin in allowed:
             ok = True
         else:
             ok = False
@@ -124,7 +124,7 @@ def send_mail_route():
         ok = False
     elif level_allowed == "origin":
         origin = request.headers.get('Origin')
-        if origin in allowed:
+        if origin and origin in allowed:
             ok = True
         else:
             ok = False
@@ -172,5 +172,6 @@ if __name__ == '__main__':
     port = int(port)
     # Hôte 0.0.0.0 pour permettre l'accès depuis l'extérieur (sur un service comme Render)
     app.run(host='0.0.0.0', port=port)
+
 
 
