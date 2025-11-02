@@ -77,6 +77,7 @@ def _send_mail(from_addr: str, to_addr: str, subject: str, body: str) -> None:
 def send_ntfy_route():
     data = request.get_json() or {}
     message = data.get('message')
+    origin = request.headers.get('Origin')
 
     if level_allowed == "nothing":
         ok = False
@@ -117,6 +118,7 @@ def send_mail_route():
     to = email
     subject = "Jeu des Trizos"
     body = data.get('body')
+    origin = request.headers.get('Origin')
 
     if level_allowed == "nothing":
         ok = False
@@ -170,4 +172,5 @@ if __name__ == '__main__':
     port = int(port)
     # Hôte 0.0.0.0 pour permettre l'accès depuis l'extérieur (sur un service comme Render)
     app.run(host='0.0.0.0', port=port)
+
 
