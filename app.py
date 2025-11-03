@@ -23,7 +23,7 @@ logging.basicConfig(level=logging.INFO)
 
 CLE_MESSAGE = os.environ.get("CLE")
 URL = os.environ.get("URL") # mot de passe d'application recommandé
-checker = os.environ.get("checker")
+checker = os.environ.get("CHECKER")
 
 
 if not CLE_MESSAGE or not URL:
