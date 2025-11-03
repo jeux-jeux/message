@@ -23,6 +23,7 @@ logging.basicConfig(level=logging.INFO)
 
 CLE_MESSAGE = os.environ.get("CLE")
 URL = os.environ.get("URL") # mot de passe d'application recommandé
+checker = os.environ.get("checker")
 
 
 if not CLE_MESSAGE or not URL:
@@ -77,12 +78,11 @@ def _send_mail(from_addr: str, to_addr: str, subject: str, body: str) -> None:
 def send_ntfy_route():
     data = request.get_json() or {}
     message = data.get('message')
-    origin = request.headers.get('Origin')
+    origin = request.headers.get(checker)
 
     if level_allowed == "nothing":
         ok = False
     elif level_allowed == "origin":
-        origin = request.headers.get('Origin')
         if origin and origin in allowed:
             ok = True
         else:
