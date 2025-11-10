@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, g, request, jsonify
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
@@ -29,16 +29,18 @@ checker = os.environ.get("CHECKER")
 if not CLE_MESSAGE or not URL:
     logging.warning("CLE_MAIL ou URL non définis dans l'environnement. L'envoi échouera tant qu'ils ne seront pas renseignés.")
 
-resp = requests.post(URL, json={"cle": CLE_MESSAGE}, timeout=5 )
-resp.raise_for_status()
-j = resp.json()
-GMAIL_USER = j.get("gmail_user")
-GMAIL_PASS = j.get("gmail_pass")
-level_allowed = j.get("level")
-allowed = j.get('allowed')
-port = j.get("port_message")
-email = j.get("email")
-ntfy_url = j.get('ntfy_url')
+@app.before_request
+def before():
+    resp = requests.post(URL, json={"cle": CLE_MESSAGE}, timeout=5 )
+    resp.raise_for_status()
+    j = resp.json()
+    g.GMAIL_USER = j.get("gmail_user")
+    g.GMAIL_PASS = j.get("gmail_pass")
+    g.level_allowed = j.get("level")
+    g.allowed = j.get('allowed')
+    g.port = j.get("port_message")
+    g.email = j.get("email")
+    g.ntfy_url = j.get('ntfy_url')
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
